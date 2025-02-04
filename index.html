@@ -1,1 +1,132 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold text-center mb-4">Attendance Management System</h1>
+        
+        <!-- Add Student Section -->
+        <div class="mb-4">
+            <input id="studentName" type="text" placeholder="Enter student name" class="border p-2 rounded w-3/4">
+            <button onclick="addStudent()" class="bg-blue-500 text-white p-2 rounded">Add Student</button>
+        </div>
+        
+        <!-- Filter Buttons -->
+        <div class="mb-4">
+            <button onclick="filterStudents('all')" class="bg-gray-300 px-4 py-2 rounded">All</button>
+            <button onclick="filterStudents('present')" class="bg-green-300 px-4 py-2 rounded">Present</button>
+            <button onclick="filterStudents('absent')" class="bg-red-300 px-4 py-2 rounded">Absent</button>
+        </div>
+        
+        <!-- Student List -->
+        <table class="w-full border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border p-2">Roll No</th>
+                    <th class="border p-2">Name</th>
+                    <th class="border p-2">Status</th>
+                    <th class="border p-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="studentList"></tbody>
+        </table>
+
+        <!-- Statistics -->
+        <div class="mt-6 grid grid-cols-3 gap-4 text-center">
+            <div class="p-4 bg-green-300 rounded">Present: <span id="totalPresent">0</span></div>
+            <div class="p-4 bg-red-300 rounded">Absent: <span id="totalAbsent">0</span></div>
+            <div class="p-4 bg-gray-300 rounded">Total: <span id="totalStudents">0</span></div>
+        </div>
+
+        <!-- Attendance Chart -->
+        <canvas id="attendanceChart" class="mt-6"></canvas>
+    </div>
+
+    <script>
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+
+        function saveData() {
+            localStorage.setItem('students', JSON.stringify(students));
+            updateTable();
+        }
+
+        function addStudent() {
+            const name = document.getElementById('studentName').value.trim();
+            if (name) {
+                students.push({ rollNo: students.length + 1, name, status: 'absent' });
+                document.getElementById('studentName').value = '';
+                saveData();
+            }
+        }
+
+        function toggleStatus(index) {
+            students[index].status = students[index].status === 'present' ? 'absent' : 'present';
+            saveData();
+        }
+
+        function deleteStudent(index) {
+            students.splice(index, 1);
+            students.forEach((s, i) => s.rollNo = i + 1);
+            saveData();
+        }
+
+        function filterStudents(filter) {
+            updateTable(filter);
+        }
+
+        function updateTable(filter = 'all') {
+            const tableBody = document.getElementById('studentList');
+            tableBody.innerHTML = '';
+            let presentCount = 0, absentCount = 0;
+            students.forEach((s, i) => {
+                if (filter === 'all' || s.status === filter) {
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td class='border p-2 text-center'>${s.rollNo}</td>
+                            <td class='border p-2'>${s.name}</td>
+                            <td class='border p-2 text-center'>
+                                <button onclick="toggleStatus(${i})" class="px-4 py-2 rounded ${s.status === 'present' ? 'bg-green-500' : 'bg-red-500'} text-white">
+                                    ${s.status.toUpperCase()}
+                                </button>
+                            </td>
+                            <td class='border p-2 text-center'>
+                                <button onclick="deleteStudent(${i})" class="bg-gray-500 text-white px-3 py-1 rounded">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                if (s.status === 'present') presentCount++;
+                if (s.status === 'absent') absentCount++;
+            });
+            document.getElementById('totalPresent').innerText = presentCount;
+            document.getElementById('totalAbsent').innerText = absentCount;
+            document.getElementById('totalStudents').innerText = students.length;
+            updateChart(presentCount, absentCount);
+        }
+
+        function updateChart(present, absent) {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            if (window.attendanceChart) window.attendanceChart.destroy();
+            window.attendanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent'],
+                    datasets: [{
+                        data: [present, absent],
+                        backgroundColor: ['#34D399', '#F87171']
+                    }]
+                }
+            });
+        }
+
+        updateTable();
+    </script>
+</body>
+</html>
